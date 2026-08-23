@@ -6,10 +6,10 @@ const { optionalAuth, requireAuth, requireAdmin } = require("../middleware/auth"
 
 const router = express.Router();
 
-// GET /api/accounts?q=tuk-hoa&page=1&limit=16
+// GET /api/accounts?q=&page=1&limit=16&sort=price_asc|price_desc
 // Công khai - ai cũng xem được, không cần đăng nhập
 router.get("/", optionalAuth, (req, res) => {
-  const { q = "", page = "1", limit = "16" } = req.query;
+  const { q = "", page = "1", limit = "16", sort = "" } = req.query;
   const keyword = q.trim().toLowerCase();
 
   let list = db.getAccounts();
@@ -17,17 +17,23 @@ router.get("/", optionalAuth, (req, res) => {
   if (keyword) {
     list = list
       .map((item) => {
-        const matchTitle = item.title.toLowerCase().includes(keyword);
+        const matchInfo = (item.info || "").toLowerCase().includes(keyword);
         const matchingSkins = (item.skins || []).filter((s) => s.toLowerCase().includes(keyword));
         const nonMatchingSkins = (item.skins || []).filter((s) => !s.toLowerCase().includes(keyword));
         return {
           ...item,
           skins: [...matchingSkins, ...nonMatchingSkins],
-          _match: matchTitle || matchingSkins.length > 0,
+          _match: matchInfo || matchingSkins.length > 0,
         };
       })
       .filter((item) => item._match)
       .map(({ _match, ...rest }) => rest);
+  }
+
+  if (sort === "price_asc") {
+    list = [...list].sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sort === "price_desc") {
+    list = [...list].sort((a, b) => (b.price || 0) - (a.price || 0));
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -54,16 +60,19 @@ router.get("/:id", (req, res) => {
 
 // POST /api/accounts - chỉ admin
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const { title, image, skins } = req.body;
-  if (!title || !image) {
-    return res.status(400).json({ error: "Vui lòng nhập tên tài khoản và URL hình ảnh." });
+  const { price, image, info, skins } = req.body;
+  const priceNum = Number(price);
+
+  if (!image || price === undefined || price === "" || Number.isNaN(priceNum) || priceNum < 0) {
+    return res.status(400).json({ error: "Vui lòng nhập giá hợp lệ (số, >= 0) và URL hình ảnh." });
   }
 
   const accounts = db.getAccounts();
   const newItem = {
     id: uuidv4(),
-    title: title.trim(),
+    price: priceNum,
     image: image.trim(),
+    info: (info || "").trim(),
     skins: Array.isArray(skins) ? skins.filter(Boolean) : [],
     createdAt: new Date().toISOString(),
   };
@@ -80,11 +89,22 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   const index = accounts.findIndex((a) => a.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: "Không tìm thấy acc." });
 
-  const { title, image, skins } = req.body;
+  const { price, image, info, skins } = req.body;
+
+  let priceValue = accounts[index].price;
+  if (price !== undefined && price !== "") {
+    const priceNum = Number(price);
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      return res.status(400).json({ error: "Giá không hợp lệ." });
+    }
+    priceValue = priceNum;
+  }
+
   accounts[index] = {
     ...accounts[index],
-    title: title !== undefined ? title.trim() : accounts[index].title,
+    price: priceValue,
     image: image !== undefined ? image.trim() : accounts[index].image,
+    info: info !== undefined ? info.trim() : accounts[index].info,
     skins: Array.isArray(skins) ? skins.filter(Boolean) : accounts[index].skins,
     updatedAt: new Date().toISOString(),
   };
