@@ -6,15 +6,38 @@ const { optionalAuth, requireAuth, requireAdmin } = require("../middleware/auth"
 
 const router = express.Router();
 
+// Nhận diện cú pháp tìm giá kiểu rút gọn: "1xx" -> 100-199 (nghìn đồng), "2x" -> 20-29 (nghìn đồng)
+// Quy tắc: 1 chữ số đứng đầu + một hoặc nhiều chữ "x" phía sau, không phân biệt hoa thường.
+function parsePricePattern(query) {
+  const match = /^(\d)(x+)$/i.exec(query.trim());
+  if (!match) return null;
+
+  const leadingDigit = parseInt(match[1], 10);
+  const xCount = match[2].length;
+  const rangeSize = Math.pow(10, xCount);
+
+  return {
+    minThousand: leadingDigit * rangeSize,
+    maxThousand: leadingDigit * rangeSize + rangeSize - 1,
+  };
+}
+
 // GET /api/accounts?q=&page=1&limit=16&sort=price_asc|price_desc
 // Công khai - ai cũng xem được, không cần đăng nhập
 router.get("/", optionalAuth, (req, res) => {
   const { q = "", page = "1", limit = "16", sort = "" } = req.query;
   const keyword = q.trim().toLowerCase();
+  const pricePattern = parsePricePattern(q);
 
   let list = db.getAccounts();
 
-  if (keyword) {
+  if (pricePattern) {
+    // Tìm theo giá dạng rút gọn, ví dụ "1xx" => giá từ 100.000đ đến 199.000đ
+    list = list.filter((item) => {
+      const priceThousand = Math.floor((item.price || 0) / 1000);
+      return priceThousand >= pricePattern.minThousand && priceThousand <= pricePattern.maxThousand;
+    });
+  } else if (keyword) {
     list = list
       .map((item) => {
         const matchInfo = (item.info || "").toLowerCase().includes(keyword);
