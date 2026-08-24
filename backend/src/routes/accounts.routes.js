@@ -24,12 +24,18 @@ function parsePricePattern(query) {
 
 // GET /api/accounts?q=&page=1&limit=16&sort=price_asc|price_desc
 // Công khai - ai cũng xem được, không cần đăng nhập
+// Acc đã bán (sold=true) sẽ bị ẩn khỏi danh sách công khai, chỉ admin mới thấy để đối soát
 router.get("/", optionalAuth, (req, res) => {
   const { q = "", page = "1", limit = "16", sort = "" } = req.query;
   const keyword = q.trim().toLowerCase();
   const pricePattern = parsePricePattern(q);
+  const isAdmin = req.user && req.user.role === "admin";
 
   let list = db.getAccounts();
+
+  if (!isAdmin) {
+    list = list.filter((item) => !item.sold);
+  }
 
   if (pricePattern) {
     // Tìm theo giá dạng rút gọn, ví dụ "1xx" => giá từ 100.000đ đến 199.000đ
@@ -97,6 +103,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     image: image.trim(),
     info: (info || "").trim(),
     skins: Array.isArray(skins) ? skins.filter(Boolean) : [],
+    sold: false,
     createdAt: new Date().toISOString(),
   };
 
@@ -145,6 +152,64 @@ router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   const [removed] = accounts.splice(index, 1);
   await db.saveAccounts(accounts);
   res.json({ item: removed });
+});
+
+// POST /api/accounts/:id/purchase - mua acc, yêu cầu đăng nhập
+// Trừ tiền trong ví, đánh dấu acc đã bán, ghi lại lịch sử mua hàng
+router.post("/:id/purchase", requireAuth, async (req, res) => {
+  const accounts = db.getAccounts();
+  const accIndex = accounts.findIndex((a) => a.id === req.params.id);
+  if (accIndex === -1) return res.status(404).json({ error: "Không tìm thấy acc." });
+
+  const account = accounts[accIndex];
+  if (account.sold) {
+    return res.status(409).json({ error: "Tài khoản này vừa được người khác mua mất, vui lòng chọn acc khác." });
+  }
+
+  const users = db.getUsers();
+  const userIndex = users.findIndex((u) => u.id === req.user.sub);
+  if (userIndex === -1) return res.status(404).json({ error: "Không tìm thấy người dùng." });
+
+  const buyer = users[userIndex];
+  const balance = buyer.balance || 0;
+
+  if (balance < account.price) {
+    return res.status(400).json({
+      error: `Số dư không đủ. Bạn cần ${account.price.toLocaleString("vi-VN")}đ nhưng ví chỉ có ${balance.toLocaleString("vi-VN")}đ. Vui lòng nạp thêm tiền.`,
+      code: "INSUFFICIENT_BALANCE",
+    });
+  }
+
+  // Trừ tiền trong ví người mua
+  const newBalance = balance - account.price;
+  users[userIndex] = { ...buyer, balance: newBalance };
+  await db.saveUsers(users);
+
+  // Đánh dấu acc đã bán, không cho ai mua lại nữa
+  accounts[accIndex] = {
+    ...account,
+    sold: true,
+    soldTo: buyer.id,
+    soldAt: new Date().toISOString(),
+  };
+  await db.saveAccounts(accounts);
+
+  // Ghi lại lịch sử mua hàng (lưu kèm snapshot thông tin acc tại thời điểm mua)
+  const purchases = db.getPurchases();
+  const purchaseRecord = {
+    id: uuidv4(),
+    userId: buyer.id,
+    accountId: account.id,
+    price: account.price,
+    image: account.image,
+    info: account.info,
+    skins: account.skins,
+    purchasedAt: new Date().toISOString(),
+  };
+  purchases.unshift(purchaseRecord);
+  await db.savePurchases(purchases);
+
+  res.json({ purchase: purchaseRecord, balance: newBalance });
 });
 
 module.exports = router;
