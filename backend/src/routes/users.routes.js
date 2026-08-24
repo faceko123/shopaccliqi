@@ -79,6 +79,26 @@ router.put("/:id", async (req, res) => {
   res.json({ item: publicUser(users[index]) });
 });
 
+// PUT /api/users/:id/balance - Admin chỉnh sửa số dư người dùng
+router.put("/:id/balance", async (req, res) => {
+  const users = db.getUsers();
+  const index = users.findIndex((u) => u.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "Không tìm thấy người dùng." });
+
+  const { balance } = req.body;
+  const balanceNum = Number(balance);
+
+  if (balance === undefined || Number.isNaN(balanceNum) || balanceNum < 0) {
+    return res.status(400).json({ error: "Số dư phải là một số hợp lệ (không âm)." });
+  }
+
+  // Cập nhật số dư mới
+  users[index].balance = balanceNum;
+  await db.saveUsers(users);
+
+  res.json({ item: publicUser(users[index]) });
+});
+
 // DELETE /api/users/:id
 router.delete("/:id", async (req, res) => {
   const users = db.getUsers();
