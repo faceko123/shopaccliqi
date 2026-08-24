@@ -8,7 +8,7 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 const router = express.Router();
 
 function publicUser(u) {
-  return { id: u.id, username: u.username, role: u.role, createdAt: u.createdAt };
+  return { id: u.id, username: u.username, role: u.role, balance: u.balance || 0, createdAt: u.createdAt };
 }
 
 // Tất cả route trong file này đều yêu cầu đăng nhập + quyền admin
@@ -40,6 +40,7 @@ router.post("/", async (req, res) => {
     username: username.trim(),
     passwordHash: bcrypt.hashSync(password, 10),
     role,
+    balance: 0,
     createdAt: new Date().toISOString(),
   };
 

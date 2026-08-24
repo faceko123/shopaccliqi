@@ -1,49 +1,55 @@
 const fs = require("fs");
 const path = require("path");
 
-const DB_PATH = path.join(__dirname, "..", "..", "data", "db.json");
+const ACCOUNTS_PATH = path.join(__dirname, "..", "..", "data", "accounts.json");
+const USERS_PATH = path.join(__dirname, "..", "..", "data", "users.json");
+const PURCHASES_PATH = path.join(__dirname, "..", "..", "data", "purchases.json");
 
-// Hàng đợi ghi đơn giản để tránh 2 request ghi đè lên nhau cùng lúc
-let writeQueue = Promise.resolve();
+// Hàng đợi ghi riêng cho từng file, tránh 2 request ghi đè lên nhau cùng lúc
+const writeQueues = new Map();
 
-function readDB() {
-  const raw = fs.readFileSync(DB_PATH, "utf-8");
+function readJSON(filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
   return JSON.parse(raw);
 }
 
-function writeDB(data) {
-  writeQueue = writeQueue.then(
+function writeJSON(filePath, data) {
+  const prevQueue = writeQueues.get(filePath) || Promise.resolve();
+  const nextQueue = prevQueue.then(
     () =>
       new Promise((resolve, reject) => {
-        fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), "utf-8", (err) => {
+        fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8", (err) => {
           if (err) reject(err);
           else resolve();
         });
       })
   );
-  return writeQueue;
+  writeQueues.set(filePath, nextQueue);
+  return nextQueue;
 }
 
-// ===== Accounts (danh sách acc) =====
+// ===== Accounts (danh sách acc liên quân - data/accounts.json) =====
 function getAccounts() {
-  return readDB().accounts;
+  return readJSON(ACCOUNTS_PATH);
 }
-
 function saveAccounts(accounts) {
-  const data = readDB();
-  data.accounts = accounts;
-  return writeDB(data);
+  return writeJSON(ACCOUNTS_PATH, accounts);
 }
 
-// ===== Users (người dùng hệ thống) =====
+// ===== Users (người dùng hệ thống - data/users.json) =====
 function getUsers() {
-  return readDB().users;
+  return readJSON(USERS_PATH);
+}
+function saveUsers(users) {
+  return writeJSON(USERS_PATH, users);
 }
 
-function saveUsers(users) {
-  const data = readDB();
-  data.users = users;
-  return writeDB(data);
+// ===== Purchases (lịch sử mua acc - data/purchases.json) =====
+function getPurchases() {
+  return readJSON(PURCHASES_PATH);
+}
+function savePurchases(purchases) {
+  return writeJSON(PURCHASES_PATH, purchases);
 }
 
 module.exports = {
@@ -51,4 +57,6 @@ module.exports = {
   saveAccounts,
   getUsers,
   saveUsers,
+  getPurchases,
+  savePurchases,
 };

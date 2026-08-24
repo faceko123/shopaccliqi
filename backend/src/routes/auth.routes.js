@@ -9,7 +9,7 @@ const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 
 function publicUser(u) {
-  return { id: u.id, username: u.username, role: u.role, createdAt: u.createdAt };
+  return { id: u.id, username: u.username, role: u.role, balance: u.balance || 0, createdAt: u.createdAt };
 }
 
 // POST /api/auth/register - tự đăng ký tài khoản (mặc định role "user")
@@ -34,6 +34,7 @@ router.post("/register", async (req, res) => {
     username: username.trim(),
     passwordHash: bcrypt.hashSync(password, 10),
     role: "user",
+    balance: 0,
     createdAt: new Date().toISOString(),
   };
 
