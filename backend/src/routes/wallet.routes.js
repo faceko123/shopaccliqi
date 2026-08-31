@@ -42,3 +42,56 @@ router.post("/topup", requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+
+// POST /api/wallet/webhook - Tiếp nhận dữ liệu chuyển khoản tự động từ SePay
+router.post("/webhook", async (req, res) => {
+  try {
+    // 1. Xác thực Secret Key từ SePay gửi qua Header
+    const secretKey = req.headers["x-sepay-secret-key"] || req.headers["authorization"];
+    if (secretKey !== process.env.SEPAY_WEBHOOK_SECRET) {
+      return res.status(401).json({ error: "Unauthorized webhook" });
+    }
+
+    const { content, transferType, transferAmount, referenceCode } = req.body;
+
+    // Chỉ xử lý các giao dịch tiền vào (transferType = "in")
+    if (transferType !== "in" || !transferAmount || transferAmount <= 0) {
+      return res.status(200).json({ success: true, message: "Ignored non-credit transaction" });
+    }
+
+    // 2. Trích xuất username từ Nội dung chuyển khoản (Ví dụ cú pháp: NAP USER123)
+    const match = content.match(/NAP\s+([A-Za-z0-9_]+)/i);
+    if (!match) {
+      return res.status(200).json({ success: true, message: "No valid user pattern found in content" });
+    }
+
+    const username = match[1].trim().toLowerCase();
+
+    // 3. Tìm người dùng & Cộng số dư
+    const users = db.getUsers();
+    const userIndex = users.findIndex((u) => u.username.toLowerCase() === username);
+
+    if (userIndex === -1) {
+      console.warn(`⚠️ Nhận tiền thành công nhưng không tìm thấy user: ${username}`);
+      return res.status(200).json({ success: true, message: "User not found" });
+    }
+
+    const buyer = users[userIndex];
+    const newBalance = (buyer.balance || 0) + Number(transferAmount);
+
+    users[userIndex] = {
+      ...buyer,
+      balance: newBalance,
+      updatedAt: new Date().toISOString()
+    };
+
+    await db.saveUsers(users);
+
+    console.log(`✅ [TỰ ĐỘNG NẠP] User "${buyer.username}" +${transferAmount.toLocaleString()}đ (Mã GD: ${referenceCode})`);
+    return res.status(200).json({ success: true, newBalance });
+
+  } catch (err) {
+    console.error("❌ Lỗi Webhook:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
