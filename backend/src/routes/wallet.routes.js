@@ -40,9 +40,10 @@ router.post("/webhook", async (req, res) => {
       return res.status(200).json({ success: true, message: "Transaction already processed" });
     }
 
-    // 4. Trích xuất username từ nội dung QR: "ten_tai_khoan CHUC MUNG SINH NHAT".
+    // 4. Trích xuất username từ nội dung QR. Ngân hàng/SePay có thể thêm mã giao dịch
+    // trước hoặc sau, ví dụ: "...-USER CHUC MUNG SINH NHAT-CHUYEN TIEN-...".
     const match = content
-      ? content.match(/^\s*([A-Za-z0-9_]+)\s+CHUC\s+MUNG\s+SINH\s+NHAT\s*$/i)
+      ? content.match(/(?:^|[^A-Za-z0-9_])([A-Za-z0-9_]+)\s+CHUC\s+MUNG\s+SINH\s+NHAT\b/i)
       : null;
     
     if (!match) {
