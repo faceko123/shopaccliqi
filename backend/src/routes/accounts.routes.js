@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const db = require("../utils/db");
 const { optionalAuth, requireAuth, requireAdmin } = require("../middleware/auth");
+const { decryptCredential, encryptCredential } = require("../utils/credentials-crypto");
 
 const router = express.Router();
 
@@ -10,6 +11,14 @@ const router = express.Router();
 function toPublicAccount(account) {
   const { gameUsername, gamePassword, ...publicAccount } = account;
   return publicAccount;
+}
+
+function toAdminAccount(account) {
+  return {
+    ...account,
+    gameUsername: decryptCredential(account.gameUsername),
+    gamePassword: decryptCredential(account.gamePassword),
+  };
 }
 
 // Nhận diện cú pháp tìm giá kiểu rút gọn: "1xx" -> 100-199 (nghìn đồng), "2x" -> 20-29 (nghìn đồng)
@@ -91,7 +100,7 @@ router.get("/:id", optionalAuth, async (req, res) => {
   const item = (await db.getAccounts()).find((a) => a.id === req.params.id);
   if (!item) return res.status(404).json({ error: "Không tìm thấy acc." });
   const isAdmin = req.user && req.user.role === "admin";
-  res.json({ item: isAdmin ? item : toPublicAccount(item) });
+  res.json({ item: isAdmin ? toAdminAccount(item) : toPublicAccount(item) });
 });
 
 // POST /api/accounts - chỉ admin
@@ -113,8 +122,8 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     image: image.trim(),
     info: (info || "").trim(),
     skins: Array.isArray(skins) ? skins.filter(Boolean) : [],
-    gameUsername: gameUsername.trim(),
-    gamePassword: gamePassword.trim(),
+    gameUsername: encryptCredential(gameUsername.trim()),
+    gamePassword: encryptCredential(gamePassword.trim()),
     sold: false,
     createdAt: new Date().toISOString(),
   };
@@ -122,7 +131,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   accounts.unshift(newItem);
   await db.saveAccounts(accounts);
 
-  res.status(201).json({ item: newItem });
+  res.status(201).json({ item: toAdminAccount(newItem) });
 });
 
 // PUT /api/accounts/:id - chỉ admin
@@ -154,13 +163,13 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     image: image !== undefined ? image.trim() : accounts[index].image,
     info: info !== undefined ? info.trim() : accounts[index].info,
     skins: Array.isArray(skins) ? skins.filter(Boolean) : accounts[index].skins,
-    gameUsername: gameUsername !== undefined ? gameUsername.trim() : accounts[index].gameUsername,
-    gamePassword: gamePassword !== undefined ? gamePassword.trim() : accounts[index].gamePassword,
+    gameUsername: gameUsername !== undefined ? encryptCredential(gameUsername.trim()) : accounts[index].gameUsername,
+    gamePassword: gamePassword !== undefined ? encryptCredential(gamePassword.trim()) : accounts[index].gamePassword,
     updatedAt: new Date().toISOString(),
   };
 
   await db.saveAccounts(accounts);
-  res.json({ item: accounts[index] });
+  res.json({ item: toAdminAccount(accounts[index]) });
 });
 
 // DELETE /api/accounts/:id - chỉ admin
@@ -231,7 +240,14 @@ router.post("/:id/purchase", requireAuth, async (req, res) => {
   purchases.unshift(purchaseRecord);
   await db.savePurchases(purchases);
 
-  res.json({ purchase: purchaseRecord, balance: newBalance });
+  res.json({
+    purchase: {
+      ...purchaseRecord,
+      gameUsername: decryptCredential(purchaseRecord.gameUsername),
+      gamePassword: decryptCredential(purchaseRecord.gamePassword),
+    },
+    balance: newBalance,
+  });
 });
 
 module.exports = router;
