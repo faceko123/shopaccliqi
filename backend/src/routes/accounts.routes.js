@@ -6,6 +6,12 @@ const { optionalAuth, requireAuth, requireAdmin } = require("../middleware/auth"
 
 const router = express.Router();
 
+// Thông tin đăng nhập game không bao giờ được gửi ra danh sách acc công khai.
+function toPublicAccount(account) {
+  const { gameUsername, gamePassword, ...publicAccount } = account;
+  return publicAccount;
+}
+
 // Nhận diện cú pháp tìm giá kiểu rút gọn: "1xx" -> 100-199 (nghìn đồng), "2x" -> 20-29 (nghìn đồng)
 // Quy tắc: 1 chữ số đứng đầu + một hoặc nhiều chữ "x" phía sau, không phân biệt hoa thường.
 function parsePricePattern(query) {
@@ -69,7 +75,9 @@ router.get("/", optionalAuth, async (req, res) => {
   const limitNum = Math.max(1, parseInt(limit, 10) || 16);
   const total = list.length;
   const start = (pageNum - 1) * limitNum;
-  const items = list.slice(start, start + limitNum);
+  const items = list.slice(start, start + limitNum).map((item) => (
+    isAdmin ? item : toPublicAccount(item)
+  ));
 
   res.json({
     items,
@@ -81,19 +89,23 @@ router.get("/", optionalAuth, async (req, res) => {
 });
 
 // GET /api/accounts/:id
-router.get("/:id", async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res) => {
   const item = (await db.getAccounts()).find((a) => a.id === req.params.id);
   if (!item) return res.status(404).json({ error: "Không tìm thấy acc." });
-  res.json({ item });
+  const isAdmin = req.user && req.user.role === "admin";
+  res.json({ item: isAdmin ? item : toPublicAccount(item) });
 });
 
 // POST /api/accounts - chỉ admin
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const { price, image, info, skins } = req.body;
+  const { price, image, info, skins, gameUsername, gamePassword } = req.body;
   const priceNum = Number(price);
 
   if (!image || price === undefined || price === "" || Number.isNaN(priceNum) || priceNum < 0) {
     return res.status(400).json({ error: "Vui lòng nhập giá hợp lệ (số, >= 0) và URL hình ảnh." });
+  }
+  if (!gameUsername?.trim() || !gamePassword?.trim()) {
+    return res.status(400).json({ error: "Vui lòng nhập tài khoản và mật khẩu game." });
   }
 
   const accounts = await db.getAccounts();
@@ -103,6 +115,8 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     image: image.trim(),
     info: (info || "").trim(),
     skins: Array.isArray(skins) ? skins.filter(Boolean) : [],
+    gameUsername: gameUsername.trim(),
+    gamePassword: gamePassword.trim(),
     sold: false,
     createdAt: new Date().toISOString(),
   };
@@ -119,7 +133,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   const index = accounts.findIndex((a) => a.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: "Không tìm thấy acc." });
 
-  const { price, image, info, skins } = req.body;
+  const { price, image, info, skins, gameUsername, gamePassword } = req.body;
 
   let priceValue = accounts[index].price;
   if (price !== undefined && price !== "") {
@@ -129,6 +143,12 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     }
     priceValue = priceNum;
   }
+  if (gameUsername !== undefined && !gameUsername.trim()) {
+    return res.status(400).json({ error: "Tài khoản game không được để trống." });
+  }
+  if (gamePassword !== undefined && !gamePassword.trim()) {
+    return res.status(400).json({ error: "Mật khẩu game không được để trống." });
+  }
 
   accounts[index] = {
     ...accounts[index],
@@ -136,6 +156,8 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     image: image !== undefined ? image.trim() : accounts[index].image,
     info: info !== undefined ? info.trim() : accounts[index].info,
     skins: Array.isArray(skins) ? skins.filter(Boolean) : accounts[index].skins,
+    gameUsername: gameUsername !== undefined ? gameUsername.trim() : accounts[index].gameUsername,
+    gamePassword: gamePassword !== undefined ? gamePassword.trim() : accounts[index].gamePassword,
     updatedAt: new Date().toISOString(),
   };
 
@@ -204,6 +226,8 @@ router.post("/:id/purchase", requireAuth, async (req, res) => {
     image: account.image,
     info: account.info,
     skins: account.skins,
+    gameUsername: account.gameUsername,
+    gamePassword: account.gamePassword,
     purchasedAt: new Date().toISOString(),
   };
   purchases.unshift(purchaseRecord);
