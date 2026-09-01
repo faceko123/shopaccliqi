@@ -6,7 +6,7 @@ const USERS_PATH = path.join(__dirname, "..", "..", "data", "users.json");
 const PURCHASES_PATH = path.join(__dirname, "..", "..", "data", "purchases.json");
 const TRANSACTIONS_PATH = path.join(__dirname, "..", "..", "data", "transactions.json");
 
-// Hàng đợi ghi riêng cho từng file, tránh 2 request ghi đè lên nhau cùng lúc
+// Hàng đợi ghi riêng cho từng file, tránh 2 request ghi đè lên nhau cùng lú
 const writeQueues = new Map();
 
 function readJSON(filePath) {
