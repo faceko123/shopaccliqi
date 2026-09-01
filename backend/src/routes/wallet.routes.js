@@ -15,7 +15,10 @@ router.post("/webhook", async (req, res) => {
   try {
     // 1. Xác thực Secret Key bắt buộc
     const webhookSecret = process.env.SEPAY_WEBHOOK_SECRET;
-    const incomingSecret = req.headers["x-sepay-secret-key"] || req.headers["authorization"];
+    const rawSecret = req.headers["x-sepay-secret-key"] || req.headers["authorization"] || "";
+    
+    // Loại bỏ tiền tố "Apikey " hoặc "Bearer " nếu SePay gửi kèm
+    const incomingSecret = rawSecret.replace(/^(Apikey|Bearer)\s+/i, "").trim();
 
     if (!webhookSecret || incomingSecret !== webhookSecret) {
       return res.status(401).json({ error: "Unauthorized webhook" });
