@@ -105,7 +105,7 @@ router.get("/:id", optionalAuth, async (req, res) => {
 
 // POST /api/accounts - chỉ admin
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const { price, image, info, skins, gameUsername, gamePassword } = req.body;
+  const { price, image, info, skins, gameUsername, gamePassword, adminNote = "" } = req.body;
   const priceNum = Number(price);
 
   if (!image || price === undefined || price === "" || Number.isNaN(priceNum) || priceNum < 0) {
@@ -113,6 +113,9 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   }
   if (!gameUsername?.trim() || !gamePassword?.trim()) {
     return res.status(400).json({ error: "Vui lòng nhập tài khoản và mật khẩu game." });
+  }
+  if (typeof adminNote !== "string" || adminNote.trim().length > 160) {
+    return res.status(400).json({ error: "Tag lưu ý tối đa 160 ký tự." });
   }
 
   const accounts = await db.getAccounts();
@@ -122,6 +125,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     image: image.trim(),
     info: (info || "").trim(),
     skins: Array.isArray(skins) ? skins.filter(Boolean) : [],
+    adminNote: adminNote.trim(),
     gameUsername: encryptCredential(gameUsername.trim()),
     gamePassword: encryptCredential(gamePassword.trim()),
     sold: false,
@@ -140,7 +144,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   const index = accounts.findIndex((a) => a.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: "Không tìm thấy acc." });
 
-  const { price, image, info, skins, gameUsername, gamePassword } = req.body;
+  const { price, image, info, skins, gameUsername, gamePassword, adminNote } = req.body;
 
   let priceValue = accounts[index].price;
   if (price !== undefined && price !== "") {
@@ -156,6 +160,9 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   if (gamePassword !== undefined && !gamePassword.trim()) {
     return res.status(400).json({ error: "Mật khẩu game không được để trống." });
   }
+  if (adminNote !== undefined && (typeof adminNote !== "string" || adminNote.trim().length > 160)) {
+    return res.status(400).json({ error: "Tag lưu ý tối đa 160 ký tự." });
+  }
 
   accounts[index] = {
     ...accounts[index],
@@ -163,6 +170,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     image: image !== undefined ? image.trim() : accounts[index].image,
     info: info !== undefined ? info.trim() : accounts[index].info,
     skins: Array.isArray(skins) ? skins.filter(Boolean) : accounts[index].skins,
+    adminNote: adminNote !== undefined ? adminNote.trim() : accounts[index].adminNote,
     gameUsername: gameUsername !== undefined ? encryptCredential(gameUsername.trim()) : accounts[index].gameUsername,
     gamePassword: gamePassword !== undefined ? encryptCredential(gamePassword.trim()) : accounts[index].gamePassword,
     updatedAt: new Date().toISOString(),
@@ -233,6 +241,7 @@ router.post("/:id/purchase", requireAuth, async (req, res) => {
     image: account.image,
     info: account.info,
     skins: account.skins,
+    adminNote: account.adminNote,
     gameUsername: account.gameUsername,
     gamePassword: account.gamePassword,
     purchasedAt: new Date().toISOString(),
