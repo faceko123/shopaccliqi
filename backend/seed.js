@@ -15,9 +15,11 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 
-const ACCOUNTS_PATH = path.join(__dirname, "data", "accounts.json");
-const USERS_PATH = path.join(__dirname, "data", "users.json");
-const PURCHASES_PATH = path.join(__dirname, "data", "purchases.json");
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, "data");
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
+const USERS_PATH = path.join(DATA_DIR, "users.json");
+const PURCHASES_PATH = path.join(DATA_DIR, "purchases.json");
 const force = process.argv.includes("--force");
 
 function hasExistingData() {

@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const path = require("path");
+const { execFileSync } = require("child_process");
 const express = require("express");
 const cors = require("cors");
 
@@ -11,6 +13,15 @@ const usersRoutes = require("./src/routes/users.routes");
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
+
+// Persistent Disk của Render ban đầu trống. Seed chỉ tạo dữ liệu mẫu khi chưa có dữ liệu,
+// nên chạy lại lúc khởi động không làm mất tài khoản hoặc giao dịch đã lưu.
+if (process.env.DATA_DIR) {
+  execFileSync(process.execPath, [path.join(__dirname, "seed.js")], {
+    env: process.env,
+    stdio: "inherit",
+  });
+}
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(express.json());
