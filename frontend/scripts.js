@@ -77,6 +77,7 @@ const inputPrice = document.getElementById("acc-price");
 const inputImage = document.getElementById("acc-image");
 const inputInfo = document.getElementById("acc-info");
 const inputSkins = document.getElementById("acc-skins");
+const inputAdminNote = document.getElementById("acc-admin-note");
 const inputGameUsername = document.getElementById("acc-game-username");
 const inputGamePassword = document.getElementById("acc-game-password");
 
@@ -384,6 +385,7 @@ function renderGrid(items, total) {
         }
 
         const infoTextHTML = item.info ? `<p class="card-info-text">${escapeHTML(item.info)}</p>` : "";
+        const adminNoteHTML = item.adminNote ? `<span class="admin-note-tag">📌 ${escapeHTML(item.adminNote)}</span>` : "";
         const soldBadgeHTML = item.sold ? `<span class="sold-card-badge">Đã bán</span>` : "";
         const viewBtnHTML = `<button class="btn-card view-btn" onclick="openImageModal('${item.id}')">👁️ Xem</button>`;
         const adminActionsHTML = isAdmin
@@ -400,6 +402,7 @@ function renderGrid(items, total) {
             <div class="info">
                 <div class="price">${formatPrice(item.price)}</div>
                 ${infoTextHTML}
+                ${adminNoteHTML}
                 ${skinTagsHTML}
                 <div class="card-actions">
                     ${viewBtnHTML}
@@ -531,6 +534,7 @@ window.openEditModal = async function (id) {
         inputImage.value = data.item.image;
         inputInfo.value = data.item.info || "";
         inputSkins.value = data.item.skins ? data.item.skins.join("\n") : "";
+        inputAdminNote.value = data.item.adminNote || "";
         inputGameUsername.value = data.item.gameUsername || "";
         inputGamePassword.value = data.item.gamePassword || "";
         crudError.textContent = "";
@@ -549,6 +553,7 @@ if (accForm) {
         const image = inputImage.value.trim();
         const info = inputInfo.value.trim();
         const skins = inputSkins.value.split("\n").map((s) => s.trim()).filter(Boolean);
+        const adminNote = inputAdminNote.value.trim();
         const gameUsername = inputGameUsername.value.trim();
         const gamePassword = inputGamePassword.value.trim();
 
@@ -557,13 +562,13 @@ if (accForm) {
             if (editingId !== null) {
                 await apiFetch(`/accounts/${editingId}`, {
                     method: "PUT",
-                    body: JSON.stringify({ price, image, info, skins, gameUsername, gamePassword }),
+                    body: JSON.stringify({ price, image, info, skins, adminNote, gameUsername, gamePassword }),
                 });
                 showToast("Đã cập nhật acc.", "success");
             } else {
                 await apiFetch("/accounts", {
                     method: "POST",
-                    body: JSON.stringify({ price, image, info, skins, gameUsername, gamePassword }),
+                    body: JSON.stringify({ price, image, info, skins, adminNote, gameUsername, gamePassword }),
                 });
                 showToast("Đã thêm acc mới.", "success");
             }
