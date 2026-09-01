@@ -75,9 +75,7 @@ router.get("/", optionalAuth, async (req, res) => {
   const limitNum = Math.max(1, parseInt(limit, 10) || 16);
   const total = list.length;
   const start = (pageNum - 1) * limitNum;
-  const items = list.slice(start, start + limitNum).map((item) => (
-    isAdmin ? item : toPublicAccount(item)
-  ));
+  const items = list.slice(start, start + limitNum).map(toPublicAccount);
 
   res.json({
     items,
