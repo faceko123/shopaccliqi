@@ -20,6 +20,8 @@ const search = document.getElementById("search");
 const searchHints = document.getElementById("search-hints");
 const sortSelect = document.getElementById("sort-select");
 const toastContainer = document.getElementById("toast-container");
+const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+const mainNav = document.getElementById("main-nav");
 
 // Auth
 const loginBtn = document.getElementById("login-btn");
@@ -64,6 +66,7 @@ const historyList = document.getElementById("history-list");
 
 // CRUD acc
 const addAccBtn = document.getElementById("add-acc-btn");
+const importAccBtn = document.getElementById("import-acc-btn");
 const adminMenu = document.getElementById("admin-menu");
 const adminMenuBtn = document.getElementById("admin-menu-btn");
 const adminMenuDropdown = document.getElementById("admin-menu-dropdown");
@@ -81,6 +84,16 @@ const inputSkins = document.getElementById("acc-skins");
 const inputAdminNote = document.getElementById("acc-admin-note");
 const inputGameUsername = document.getElementById("acc-game-username");
 const inputGamePassword = document.getElementById("acc-game-password");
+
+// Nhập acc từ CSV
+const csvImportModal = document.getElementById("csv-import-modal");
+const csvImportModalClose = document.getElementById("csv-import-modal-close");
+const csvImportFile = document.getElementById("csv-import-file");
+const csvImportError = document.getElementById("csv-import-error");
+const csvImportPreview = document.getElementById("csv-import-preview");
+const csvImportCancelBtn = document.getElementById("csv-import-cancel-btn");
+const csvImportSubmitBtn = document.getElementById("csv-import-submit-btn");
+let pendingBulkAccounts = [];
 
 // Quản lý người dùng
 const manageUsersBtn = document.getElementById("manage-users-btn");
@@ -102,6 +115,23 @@ function showToast(message, type = "info") {
         el.classList.add("leaving");
         setTimeout(() => el.remove(), 220);
     }, 3200);
+}
+
+// Menu điều hướng thu gọn trên điện thoại
+if (mobileMenuBtn && mainNav) {
+    mobileMenuBtn.addEventListener("click", () => {
+        const isOpen = mainNav.classList.toggle("mobile-open");
+        mobileMenuBtn.classList.toggle("active", isOpen);
+        mobileMenuBtn.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    mainNav.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+            mainNav.classList.remove("mobile-open");
+            mobileMenuBtn.classList.remove("active");
+            mobileMenuBtn.setAttribute("aria-expanded", "false");
+        });
+    });
 }
 
 // ================= GỌI API =================
@@ -526,6 +556,151 @@ if (addAccBtn) {
     });
 }
 
+function parseCsv(text) {
+    const firstLine = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0] || "";
+    const delimiter = firstLine.split(";").length > firstLine.split(",").length ? ";" : ",";
+    const rows = [];
+    let row = [];
+    let value = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        if (char === '"') {
+            if (inQuotes && text[index + 1] === '"') {
+                value += '"';
+                index += 1;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === delimiter && !inQuotes) {
+            row.push(value.trim());
+            value = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+            if (char === "\r" && text[index + 1] === "\n") index += 1;
+            row.push(value.trim());
+            if (row.some(Boolean)) rows.push(row);
+            row = [];
+            value = "";
+        } else {
+            value += char;
+        }
+    }
+    row.push(value.trim());
+    if (row.some(Boolean)) rows.push(row);
+    if (inQuotes) throw new Error("File CSV có dấu nháy kép chưa được đóng.");
+    return rows;
+}
+
+function resetCsvImport(clearFile = true) {
+    pendingBulkAccounts = [];
+    if (clearFile && csvImportFile) csvImportFile.value = "";
+    if (csvImportError) csvImportError.textContent = "";
+    if (csvImportPreview) {
+        csvImportPreview.classList.add("hidden");
+        csvImportPreview.innerHTML = "";
+    }
+    if (csvImportSubmitBtn) csvImportSubmitBtn.disabled = true;
+}
+
+function closeCsvImportModal() {
+    if (csvImportModal) csvImportModal.classList.remove("active");
+    resetCsvImport();
+}
+
+function showCsvPreview(items) {
+    const previewRows = items.slice(0, 5).map((item) => `
+        <tr>
+            <td>${formatPrice(item.price)}</td>
+            <td>${escapeHTML(item.info || "-")}</td>
+            <td>${escapeHTML(item.adminNote || "-")}</td>
+            <td>${item.skins.length}</td>
+        </tr>
+    `).join("");
+    csvImportPreview.innerHTML = `
+        <p><strong>Đã đọc ${items.length} acc hợp lệ.</strong> Tài khoản và mật khẩu game sẽ được mã hóa khi lưu.</p>
+        <div class="csv-preview-table-wrap">
+            <table class="csv-preview-table">
+                <thead><tr><th>Giá</th><th>Thông tin</th><th>Tag lưu ý</th><th>Skins</th></tr></thead>
+                <tbody>${previewRows}</tbody>
+            </table>
+        </div>
+        ${items.length > 5 ? `<p class="csv-preview-more">…và ${items.length - 5} acc khác.</p>` : ""}
+    `;
+    csvImportPreview.classList.remove("hidden");
+}
+
+if (importAccBtn) {
+    importAccBtn.addEventListener("click", () => {
+        resetCsvImport();
+        csvImportModal.classList.add("active");
+    });
+}
+
+if (csvImportFile) {
+    csvImportFile.addEventListener("change", async () => {
+        resetCsvImport(false);
+        const file = csvImportFile.files[0];
+        if (!file) return;
+        try {
+            const rows = parseCsv(await file.text());
+            const firstValue = (rows[0]?.[0] || "").toLowerCase();
+            const dataRows = ["tag lưu ý", "tag luu y", "tag", "note"].includes(firstValue) ? rows.slice(1) : rows;
+            if (!dataRows.length || dataRows.length > 200) throw new Error("File cần có từ 1 đến 200 dòng acc.");
+
+            const errors = [];
+            const items = dataRows.map((row, index) => {
+                const line = index + (dataRows === rows ? 1 : 2);
+                if (row.length < 7) errors.push(`Dòng ${line}: cần đủ 7 cột.`);
+                const price = Number((row[1] || "").replace(/[.\s]/g, ""));
+                if (!Number.isFinite(price) || price < 0) errors.push(`Dòng ${line}: giá không hợp lệ.`);
+                if (!(row[2] || "").trim()) errors.push(`Dòng ${line}: thiếu URL ảnh.`);
+                if (!(row[5] || "").trim() || !(row[6] || "").trim()) errors.push(`Dòng ${line}: thiếu tài khoản hoặc mật khẩu game.`);
+                if ((row[0] || "").trim().length > 160) errors.push(`Dòng ${line}: tag lưu ý tối đa 160 ký tự.`);
+                return {
+                    price,
+                    image: (row[2] || "").trim(),
+                    info: (row[3] || "").trim(),
+                    skins: (row[4] || "").split("|").map((skin) => skin.trim()).filter(Boolean),
+                    adminNote: (row[0] || "").trim(),
+                    gameUsername: (row[5] || "").trim(),
+                    gamePassword: (row[6] || "").trim(),
+                };
+            });
+            if (errors.length) throw new Error(errors.slice(0, 5).join(" "));
+            pendingBulkAccounts = items;
+            showCsvPreview(items);
+            csvImportSubmitBtn.disabled = false;
+        } catch (err) {
+            csvImportError.textContent = err.message;
+        }
+    });
+}
+
+if (csvImportSubmitBtn) {
+    csvImportSubmitBtn.addEventListener("click", async () => {
+        if (!pendingBulkAccounts.length) return;
+        setButtonLoading(csvImportSubmitBtn, true);
+        try {
+            const data = await apiFetch("/accounts/bulk", {
+                method: "POST",
+                body: JSON.stringify({ items: pendingBulkAccounts }),
+            });
+            showToast(`Đã thêm ${data.created} acc và mã hóa thông tin đăng nhập.`, "success");
+            closeCsvImportModal();
+            fetchAndRenderAccounts();
+        } catch (err) {
+            const details = err.details?.length ? ` ${err.details.join(" ")}` : "";
+            csvImportError.textContent = `${err.message}${details}`;
+        } finally {
+            setButtonLoading(csvImportSubmitBtn, false, "Nhập acc");
+        }
+    });
+}
+
+if (csvImportModalClose) csvImportModalClose.addEventListener("click", closeCsvImportModal);
+if (csvImportCancelBtn) csvImportCancelBtn.addEventListener("click", closeCsvImportModal);
+
 window.openEditModal = async function (id) {
     try {
         const data = await apiFetch(`/accounts/${id}`);
@@ -941,6 +1116,7 @@ window.addEventListener("click", (e) => {
     if (e.target === crudModal) closeCrudModal();
     if (e.target === loginModal) closeLoginModal();
     if (e.target === usersModal) usersModal.classList.remove("active");
+    if (e.target === csvImportModal) closeCsvImportModal();
     if (e.target === walletModal) closeWalletModal();
     if (e.target === historyModal) historyModal.classList.remove("active");
 });
@@ -951,6 +1127,7 @@ document.addEventListener("keydown", (e) => {
         closeCrudModal();
         closeLoginModal();
         usersModal.classList.remove("active");
+        closeCsvImportModal();
         closeWalletModal();
         historyModal.classList.remove("active");
         if (searchHints) searchHints.classList.add("hidden");

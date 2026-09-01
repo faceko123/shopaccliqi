@@ -82,6 +82,24 @@ body {
     align-items: center;
     gap: 24px;
 }
+.mobile-menu-btn {
+    display: none;
+    width: 42px;
+    height: 38px;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+}
+.mobile-menu-btn span {
+    display: block;
+    height: 2px;
+    margin: 4px 0;
+    border-radius: 2px;
+    background: #ffffff;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
 
 .nav-item {
     color: #ffffff;
@@ -956,6 +974,33 @@ body {
 }
 .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 
+/* Nhập hàng loạt acc từ CSV */
+.csv-import-card { max-width: 760px; }
+.csv-import-help { color: var(--ink-muted); font-size: 0.84rem; line-height: 1.55; }
+.csv-import-help code, .csv-import-preview code {
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: var(--gold);
+    background: var(--surface);
+}
+.csv-import-preview {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(216, 181, 104, 0.25);
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 0.84rem;
+}
+.csv-preview-table-wrap { overflow-x: auto; }
+.csv-preview-table { width: 100%; border-collapse: collapse; }
+.csv-preview-table th, .csv-preview-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(139, 144, 163, 0.2);
+    text-align: left;
+    vertical-align: top;
+}
+.csv-preview-more { margin: 10px 0 0; color: var(--ink-muted); }
+
 /* Tabs Đăng nhập / Đăng ký */
 .auth-tabs {
     display: flex;
@@ -1117,6 +1162,33 @@ body {
 
 @media (max-width: 600px) {
     header { flex-direction: column; align-items: stretch; }
+    .top-bar {
+        position: relative;
+        min-height: 58px;
+        padding: 10px 16px;
+    }
+    .mobile-menu-btn { display: block; }
+    .mobile-menu-btn.active span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .mobile-menu-btn.active span:nth-child(2) { opacity: 0; }
+    .mobile-menu-btn.active span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: calc(100% + 1px);
+        left: 0;
+        right: 0;
+        z-index: 110;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        padding: 10px 16px 14px;
+        background: #000000;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .nav-links.mobile-open { display: flex; }
+    .nav-item { padding: 10px 14px; }
+    .user-profile-top { margin-left: auto; }
+    .main-bar { padding: 10px 16px; gap: 12px; }
     .header-actions { flex-direction: column; width: 100%; }
     .search-box { flex: 1 1 auto; width: 100%; }
     #auth-area { margin-left: 0; justify-content: center; }

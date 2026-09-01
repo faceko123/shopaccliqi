@@ -23,7 +23,10 @@
     <header class="site-header">
         <!-- Tầng 1: Navigation Top Bar -->
         <div class="top-bar">
-            <nav class="nav-links">
+            <button type="button" id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="main-nav">
+                <span></span><span></span><span></span>
+            </button>
+            <nav id="main-nav" class="nav-links">
                 <a href="index.html" class="nav-item active">Trang chủ</a>
                 <a href="frontend/lichsumuanick.html" class="nav-item">Lịch sử mua nick</a>
                 <a href="frontend/naptien.html" class="nav-item">Nạp tiền</a>
@@ -42,6 +45,7 @@
                 <!-- Menu tính năng Admin thả xuống khi bấm vào Profile -->
                 <div id="admin-menu-dropdown" class="admin-menu-dropdown hidden">
                     <button type="button" id="add-acc-btn" class="admin-menu-item">➕ Thêm acc mới</button>
+                    <button type="button" id="import-acc-btn" class="admin-menu-item">📄 Nhập acc từ CSV</button>
                     <button type="button" id="manage-users-btn" class="admin-menu-item">👤 Quản lý người dùng</button>
                 </div>
             </div>
@@ -66,10 +70,6 @@
                     <div class="search-hint-group">
                         <span class="search-hint-label">💰 Tìm theo giá tiền</span>
                         <p class="search-hint-desc">Nhập giá tiền, ví dụ: <em>1x(10k-19k) 1xx(100-199k)</em></p>
-                    </div>
-                    <div class="search-hint-group">
-                        <span class="search-hint-label">Tìm theo thông tin</span>
-                        <p class="search-hint-desc">Nhập <em>TTTKLK hoặc MSO hoặc Mail</em></p>
                     </div>
                 </div>
             </div>
@@ -240,6 +240,25 @@
                 </select>
                 <button type="submit" class="btn btn-primary btn-small">+ Thêm</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Nhập Acc Từ CSV -->
+    <div id="csv-import-modal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-card wide csv-import-card">
+            <span id="csv-import-modal-close" class="modal-close">&times;</span>
+            <h2>📄 Nhập Nhiều Acc Từ CSV</h2>
+            <p class="csv-import-help">Chọn file CSV có các cột theo thứ tự: <code>tag lưu ý, giá, URL ảnh, thông tin, skins, tài khoản game, mật khẩu game</code>. Các skin cách nhau bằng dấu <code>|</code>.</p>
+            <div class="form-group">
+                <label for="csv-import-file">File CSV</label>
+                <input type="file" id="csv-import-file" accept=".csv,text/csv">
+            </div>
+            <div id="csv-import-error" class="form-error"></div>
+            <div id="csv-import-preview" class="csv-import-preview hidden"></div>
+            <div class="form-actions">
+                <button type="button" id="csv-import-cancel-btn" class="btn btn-secondary">Hủy</button>
+                <button type="button" id="csv-import-submit-btn" class="btn btn-primary" disabled>Nhập acc</button>
+            </div>
         </div>
     </div>
 
