@@ -5,6 +5,7 @@ const { execFileSync } = require("child_process");
 const express = require("express");
 const cors = require("cors");
 const db = require("./src/utils/db");
+const { encryptCredential, isEncryptedCredential, validateEncryptionKey } = require("./src/utils/credentials-crypto");
 
 const authRoutes = require("./src/routes/auth.routes");
 const accountsRoutes = require("./src/routes/accounts.routes");
@@ -46,12 +47,36 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Đã xảy ra lỗi máy chủ." });
 });
 
+async function encryptStoredGameCredentials() {
+  const encryptCollection = async (getItems, saveItems) => {
+    const items = await getItems();
+    let changed = false;
+    const encryptedItems = items.map((item) => {
+      const encryptedUsername = item.gameUsername && !isEncryptedCredential(item.gameUsername)
+        ? encryptCredential(item.gameUsername)
+        : item.gameUsername;
+      const encryptedPassword = item.gamePassword && !isEncryptedCredential(item.gamePassword)
+        ? encryptCredential(item.gamePassword)
+        : item.gamePassword;
+      changed ||= encryptedUsername !== item.gameUsername || encryptedPassword !== item.gamePassword;
+      return { ...item, gameUsername: encryptedUsername, gamePassword: encryptedPassword };
+    });
+    if (changed) await saveItems(encryptedItems);
+  };
+
+  await encryptCollection(db.getAccounts, db.saveAccounts);
+  await encryptCollection(db.getPurchases, db.savePurchases);
+}
+
 async function start() {
+  // Không dùng khóa mặc định: credential game chỉ được lưu khi có khóa bí mật hợp lệ.
+  validateEncryptionKey();
   if (typeof db.initialize === "function") {
     await db.initialize();
   } else {
     console.warn("Kho dữ liệu PostgreSQL chưa được nạp; đang dùng chế độ tương thích tạm thời.");
   }
+  await encryptStoredGameCredentials();
   app.listen(port, () => {
     console.log(`API đang chạy tại cổng ${port}`);
   });
