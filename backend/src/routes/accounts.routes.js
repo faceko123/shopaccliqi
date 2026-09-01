@@ -139,6 +139,51 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   res.status(201).json({ item: toAdminAccount(newItem) });
 });
 
+// POST /api/accounts/bulk - thêm nhiều acc từ dữ liệu CSV đã được admin xem trước
+router.post("/bulk", requireAuth, requireAdmin, async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length === 0 || items.length > 200) {
+    return res.status(400).json({ error: "Mỗi lần chỉ có thể nhập từ 1 đến 200 acc." });
+  }
+
+  const errors = [];
+  const newItems = items.map((item, index) => {
+    const line = index + 2; // Dòng 1 là tiêu đề CSV
+    const price = Number(item.price);
+    const image = typeof item.image === "string" ? item.image.trim() : "";
+    const gameUsername = typeof item.gameUsername === "string" ? item.gameUsername.trim() : "";
+    const gamePassword = typeof item.gamePassword === "string" ? item.gamePassword.trim() : "";
+    const adminNote = typeof item.adminNote === "string" ? item.adminNote.trim() : "";
+
+    if (!Number.isFinite(price) || price < 0) errors.push(`Dòng ${line}: giá không hợp lệ.`);
+    if (!image) errors.push(`Dòng ${line}: thiếu URL hình ảnh.`);
+    if (!gameUsername || !gamePassword) errors.push(`Dòng ${line}: thiếu tài khoản hoặc mật khẩu game.`);
+    if (adminNote.length > 160) errors.push(`Dòng ${line}: tag lưu ý tối đa 160 ký tự.`);
+
+    return {
+      id: uuidv4(),
+      price,
+      image,
+      info: typeof item.info === "string" ? item.info.trim() : "",
+      skins: Array.isArray(item.skins) ? item.skins.map((skin) => String(skin).trim()).filter(Boolean) : [],
+      adminNote,
+      gameUsername: encryptCredential(gameUsername),
+      gamePassword: encryptCredential(gamePassword),
+      sold: false,
+      createdAt: new Date().toISOString(),
+    };
+  });
+
+  if (errors.length > 0) {
+    return res.status(400).json({ error: "File CSV có dữ liệu không hợp lệ.", details: errors.slice(0, 10) });
+  }
+
+  const accounts = await db.getAccounts();
+  accounts.unshift(...newItems);
+  await db.saveAccounts(accounts);
+  res.status(201).json({ created: newItems.length });
+});
+
 // PUT /api/accounts/:id - chỉ admin
 router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   const accounts = await db.getAccounts();
