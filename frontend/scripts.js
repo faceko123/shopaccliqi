@@ -911,7 +911,7 @@ window.openImageModal = function (id) {
     if (modalInfoTitle) modalInfoTitle.textContent = formatPrice(item.price);
     if (modalInfoText) modalInfoText.textContent = item.info || "";
     if (modalInfoNote) {
-        modalInfoNote.textContent = item.adminNote ? `📌 ${item.adminNote}` : "";
+        modalInfoNote.textContent = item.adminNote ? ` ${item.adminNote}` : "";
         modalInfoNote.classList.toggle("hidden", !item.adminNote);
     }
     if (modalInfoSkins) {
