@@ -817,6 +817,11 @@ body {
     position: relative;
 }
 
+.modal-image-wrap {
+    position: relative;
+    max-width: 90vw;
+}
+
 .modal-content {
     max-width: 90vw;
     max-height: 62vh;
@@ -853,8 +858,12 @@ body {
     margin: 0;
 }
 .modal-note-tag {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 10px;
     width: fit-content;
-    max-width: 100%;
+    max-width: calc(100% - 20px);
     padding: 5px 9px;
     border: 1px solid #ff8b8b;
     border-radius: 999px;
