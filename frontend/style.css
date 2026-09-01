@@ -675,6 +675,19 @@ body {
     line-height: 1.45;
     margin: 0;
 }
+.admin-note-tag {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(80, 150, 230, 0.3);
+    border-radius: 999px;
+    color: #8fc6ff;
+    background: rgba(80, 150, 230, 0.12);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
 
 /* ===== Skin Tags ===== */
 .skin-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
