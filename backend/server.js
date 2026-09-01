@@ -4,6 +4,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const express = require("express");
 const cors = require("cors");
+const db = require("./src/utils/db");
 
 const authRoutes = require("./src/routes/auth.routes");
 const accountsRoutes = require("./src/routes/accounts.routes");
@@ -45,6 +46,14 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Đã xảy ra lỗi máy chủ." });
 });
 
-app.listen(port, () => {
-  console.log(`API đang chạy tại cổng ${port}`);
+async function start() {
+  await db.initialize();
+  app.listen(port, () => {
+    console.log(`API đang chạy tại cổng ${port}`);
+  });
+}
+
+start().catch((error) => {
+  console.error("Không thể khởi tạo kho dữ liệu:", error);
+  process.exit(1);
 });
