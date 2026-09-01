@@ -62,12 +62,13 @@ router.get("/", optionalAuth, async (req, res) => {
     list = list
       .map((item) => {
         const matchInfo = (item.info || "").toLowerCase().includes(keyword);
+        const matchAdminNote = (item.adminNote || "").toLowerCase().includes(keyword);
         const matchingSkins = (item.skins || []).filter((s) => s.toLowerCase().includes(keyword));
         const nonMatchingSkins = (item.skins || []).filter((s) => !s.toLowerCase().includes(keyword));
         return {
           ...item,
           skins: [...matchingSkins, ...nonMatchingSkins],
-          _match: matchInfo || matchingSkins.length > 0,
+          _match: matchInfo || matchAdminNote || matchingSkins.length > 0,
         };
       })
       .filter((item) => item._match)
