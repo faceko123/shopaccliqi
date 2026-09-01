@@ -105,4 +105,19 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json({ balance: user.balance || 0 });
 });
 
+// GET /api/wallet/transactions - Lịch sử nạp tiền của người dùng hiện tại
+router.get("/transactions", requireAuth, async (req, res) => {
+  const users = await db.getUsers();
+  const user = users.find((u) => u.id === req.user.sub);
+  if (!user) return res.status(404).json({ error: "Không tìm thấy người dùng." });
+
+  const transactions = await db.getTransactions();
+  const items = transactions
+    .filter((transaction) => transaction.username?.toLowerCase() === user.username.toLowerCase())
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(({ referenceCode, amount, createdAt }) => ({ referenceCode, amount, createdAt }));
+
+  res.json({ items });
+});
+
 module.exports = router;
