@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nạp tiền vào tài khoản - Shop Acc Liqi">
+    <title>Nạp Tiền - Shop Acc Liqi</title>
+
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/zv0jlmxj/image/upload/v1787241826/96477251-8c82-4f3f-a032-8719e420fb94.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Spectral:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-title {
+            font-family: var(--font-display);
+            color: var(--gold);
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .topup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 768px) {
+            .topup-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .topup-card {
+            background: var(--bg-elevated);
+            border: 1px solid rgba(216, 181, 104, 0.25);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+        .topup-card h2 {
+            font-family: var(--font-display);
+            color: var(--gold);
+            font-size: 1.3rem;
+            margin-top: 0;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .qr-placeholder {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+        .qr-placeholder img {
+            width: 200px;
+            height: 200px;
+            display: block;
+        }
+        .bank-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(139, 144, 163, 0.2);
+            font-size: 0.9rem;
+        }
+        .bank-info-item span:first-child {
+            color: var(--ink-muted);
+        }
+        .bank-info-item span:last-child {
+            font-weight: 600;
+            color: var(--ink);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="toast-container" aria-live="polite"></div>
+
+    <header class="site-header">
+        <!-- Tầng 1: Navigation Top Bar -->
+        <div class="top-bar">
+            <nav class="nav-links">
+                <a href="index.html" class="nav-item">Trang chủ</a>
+                <a href="lichsumuanick.html" class="nav-item">Lịch sử mua nick</a>
+                <a href="naptien.html" class="nav-item active">Nạp tiền</a>
+                <a href="baiviet.html" class="nav-item">Bài viết hướng dẫn</a>
+                <a href="lienhe.html" class="nav-item">Liên hệ</a>
+            </nav>
+
+            <div id="user-profile-top" class="user-profile-top hidden">
+                <img class="user-avatar" src="https://res.cloudinary.com/zv0jlmxj/image/upload/v1787241826/96477251-8c82-4f3f-a032-8719e420fb94.png" alt="Avatar">
+                <div class="user-details">
+                    <span id="user-display" class="user-name"></span>
+                    <span class="user-balance">Số dư: <strong id="wallet-balance-display">0 đ</strong></span>
+                </div>
+
+                <div id="admin-menu-dropdown" class="admin-menu-dropdown hidden">
+                    <button type="button" id="add-acc-btn" class="admin-menu-item">➕ Thêm acc mới</button>
+                    <button type="button" id="manage-users-btn" class="admin-menu-item">👤 Quản lý người dùng</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tầng 2: Main Header / Search & Auth -->
+        <div class="main-bar">
+            <div class="brand-logo">
+                <a href="index.html">
+                    <img class="logo" src="https://res.cloudinary.com/zv0jlmxj/image/upload/v1787241826/96477251-8c82-4f3f-a032-8719e420fb94.png" alt="Logo">
+                </a>
+            </div>
+
+            <div id="auth-actions">
+                <button id="login-btn" class="btn btn-secondary">Đăng Nhập</button>
+                <button id="logout-btn" class="btn-logout hidden">
+                    <span class="logout-icon">↪</span> Đăng xuất
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 class="page-title">💳 Nạp Tiền Vào Tài Khoản</h1>
+
+        <div class="topup-grid">
+            <!-- Cột Nạp Demo Nhanh -->
+            <div class="topup-card">
+                <h2>⚡ Nạp Tiền Nhanh (Thử nghiệm)</h2>
+                
+                <div class="wallet-balance-box">
+                    <span class="wallet-balance-label">Số dư hiện tại</span>
+                    <span id="page-wallet-balance" class="wallet-balance-amount">0 đ</span>
+                </div>
+
+                <form id="page-topup-form">
+                    <div class="form-group">
+                        <label for="page-topup-amount">Số tiền nạp (VNĐ)</label>
+                        <input type="number" id="page-topup-amount" min="10000" step="10000" placeholder="Ví dụ: 100000" required>
+                    </div>
+                    <div class="topup-quick-amounts">
+                        <button type="button" class="topup-chip page-chip" data-amount="50000">50k</button>
+                        <button type="button" class="topup-chip page-chip" data-amount="100000">100k</button>
+                        <button type="button" class="topup-chip page-chip" data-amount="200000">200k</button>
+                        <button type="button" class="topup-chip page-chip" data-amount="500000">500k</button>
+                        <button type="button" class="topup-chip page-chip" data-amount="1000000">1 triệu</button>
+                    </div>
+                    <div id="page-topup-error" class="form-error"></div>
+                    <button type="submit" id="page-topup-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 6px;">Nạp Ngay (Demo)</button>
+                </form>
+
+                <p class="wallet-note">⚠️ Nạp demo cộng tiền trực tiếp vào tài khoản mà không cần chuyển khoản thật.</p>
+            </div>
+
+            <!-- Cột Chuyển Khoản Ngân Hàng Tự Động VietQR -->
+            <div class="topup-card">
+                <h2>🏦 Chuyển Khoản Tự Động (VietQR)</h2>
+
+                <div style="text-align: center;">
+                    <div class="qr-placeholder">
+                        <img id="vietqr-img" src="https://img.vietqr.io/image/MB-130907072007-compact2.png?addInfo=NAP" alt="QR Thanh Toán VietQR">
+                    </div>
+                </div>
+
+                <div class="bank-info-list" style="margin-top: 12px;">
+                    <div class="bank-info-item">
+                        <span>Ngân hàng:</span>
+                        <span>MBBANK (Quân Đội)</span>
+                    </div>
+                    <div class="bank-info-item">
+                        <span>Số tài khoản:</span>
+                        <span style="color: var(--gold);">130907072007</span>
+                    </div>
+                    <div class="bank-info-item">
+                        <span>Chủ tài khoản:</span>
+                        <span>NGUYEN THANH VIET</span>
+                    </div>
+                    <div class="bank-info-item">
+                        <span>Nội dung CK:</span>
+                        <span id="transfer-content" style="color: var(--maroon); font-weight: 700;">NAP [Tên tài khoản]</span>
+                    </div>
+                </div>
+
+                <p class="wallet-note" style="margin-top: 16px;">
+                    📌 <strong>Lưu ý:</strong> Vui lòng quét mã QR hoặc nhập <strong>đúng Nội dung CK</strong> để hệ thống SePay tự động cộng tiền trong vòng 1-3 phút.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Đăng Nhập / Đăng Ký -->
+    <div id="login-modal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-card">
+            <span id="login-modal-close" class="modal-close">&times;</span>
+
+            <div class="auth-tabs">
+                <button type="button" id="tab-login" class="auth-tab active">Đăng nhập</button>
+                <button type="button" id="tab-register" class="auth-tab">Đăng ký</button>
+            </div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Tên đăng nhập *</label>
+                    <input type="text" id="username" required placeholder="Nhập tên tài khoản">
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu *</label>
+                    <input type="password" id="password" required placeholder="Nhập mật khẩu">
+                </div>
+                <div id="login-error" class="form-error"></div>
+                <div class="login-hint">
+                    <p>💡 <strong>Tài khoản thử nghiệm:</strong></p>
+                    <p>• Admin: <code>admin</code> / <code>admin123</code> (Toàn quyền)</p>
+                    <p>• User: <code>user</code> / <code>user123</code> (Chỉ xem)</p>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="login-submit-btn" class="btn btn-primary" style="width: 100%;">Đăng nhập</button>
+                </div>
+            </form>
+
+            <form id="register-form" class="hidden">
+                <div class="form-group">
+                    <label for="reg-username">Tên đăng nhập *</label>
+                    <input type="text" id="reg-username" required placeholder="Chọn tên đăng nhập">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Mật khẩu *</label>
+                    <input type="password" id="reg-password" required placeholder="Tối thiểu 6 ký tự" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password-confirm">Nhập lại mật khẩu *</label>
+                    <input type="password" id="reg-password-confirm" required placeholder="Nhập lại mật khẩu" minlength="6">
+                </div>
+                <div id="register-error" class="form-error"></div>
+                <div class="form-actions">
+                    <button type="submit" id="register-submit-btn" class="btn btn-primary" style="width: 100%;">Tạo tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="scripts.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const balanceEl = document.getElementById("page-wallet-balance");
+            const topupForm = document.getElementById("page-topup-form");
+            const topupInput = document.getElementById("page-topup-amount");
+            const topupError = document.getElementById("page-topup-error");
+            const submitBtn = document.getElementById("page-topup-submit-btn");
+            const transferContentEl = document.getElementById("transfer-content");
+            const vietqrImg = document.getElementById("vietqr-img");
+
+            const BANK_ID = "MB";
+            const ACCOUNT_NO = "130907072007";
+            const ACCOUNT_NAME = "NGUYEN THANH VIET";
+
+            // Hàm tạo mã VietQR động
+            function updateVietQR() {
+                const username = currentUser ? currentUser.username : "";
+                const amount = Number(topupInput.value) || 0;
+                const memo = username ? `${username.toUpperCase()} CHUC MUNG SINH NHAT` : "[Tên tài khoản] CHUC MUNG SINH NHAT";
+
+                transferContentEl.textContent = memo;
+
+                const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
+                vietqrImg.src = qrUrl;
+            }
+
+            function updateTopupUI() {
+                if (currentUser) {
+                    balanceEl.textContent = formatPrice(currentUser.balance || 0);
+                } else {
+                    balanceEl.textContent = "0 đ";
+                }
+                updateVietQR();
+            }
+
+            updateTopupUI();
+
+            // Tự động thay đổi VietQR khi thay đổi số tiền nhập
+            topupInput.addEventListener("input", updateVietQR);
+
+            // Gắn sự kiện chọn nhanh số tiền
+            document.querySelectorAll(".page-chip").forEach(chip => {
+                chip.addEventListener("click", () => {
+                    topupInput.value = chip.dataset.amount;
+                    updateVietQR();
+                });
+            });
+
+            // Nạp tiền Demo
+            topupForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                topupError.textContent = "";
+
+                if (!currentUser) {
+                    switchAuthTab("login");
+                    loginModal.classList.add("active");
+                    showToast("Vui lòng đăng nhập để thực hiện nạp tiền.", "info");
+                    return;
+                }
+
+                const amount = Number(topupInput.value);
+                if (!amount || amount <= 0) {
+                    topupError.textContent = "Vui lòng nhập số tiền hợp lệ.";
+                    return;
+                }
+
+                setButtonLoading(submitBtn, true);
+                try {
+                    const data = await apiFetch("/wallet/topup", {
+                        method: "POST",
+                        body: JSON.stringify({ amount }),
+                    });
+
+                    currentUser.balance = data.balance;
+                    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                    updateAuthUI();
+                    updateTopupUI();
+
+                    showToast(`Nạp thành công ${formatPrice(amount)}!`, "success");
+                    topupForm.reset();
+                    updateVietQR();
+                } catch (err) {
+                    topupError.textContent = err.message;
+                } finally {
+                    setButtonLoading(submitBtn, false, "Nạp Ngay (Demo)");
+                }
+            });
+
+            // Tự động kiểm tra số dư mỗi 4 giây (Polling SePay)
+            setInterval(async () => {
+                if (!currentUser) return;
+                try {
+                    const data = await apiFetch("/wallet/me");
+                    if (data.balance !== currentUser.balance) {
+                        currentUser.balance = data.balance;
+                        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                        updateAuthUI();
+                        updateTopupUI();
+                        showToast(`🎉 Nạp tiền tự động thành công! Số dư mới: ${formatPrice(data.balance)}`, "success");
+                    }
+                } catch (err) {
+                    // Bỏ qua lỗi tạm thời
+                }
+            }, 4000);
+        });
+    </script>
+</body>
+
+</html>
