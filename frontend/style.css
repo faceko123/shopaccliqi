@@ -852,6 +852,18 @@ body {
     line-height: 1.5;
     margin: 0;
 }
+.modal-note-tag {
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px 9px;
+    border: 1px solid #ff8b8b;
+    border-radius: 999px;
+    color: #111111;
+    background: #ef4444;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
 
 /* Khu vực mua acc bên trong modal xem ảnh */
 .modal-buy-area {
