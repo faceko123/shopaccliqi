@@ -17,7 +17,33 @@ node seed.js               # tạo dữ liệu mẫu: 18 acc + 2 tài khoản (a
 npm start                  # chạy server tại http://localhost:4000
 ```
 
+Trước khi chạy server, tạo khóa mã hóa AES-256-GCM và đặt vào `backend/.env` (không commit file này):
+
+```powershell
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
+```
+
+Sao chép kết quả vào `GAME_CREDENTIALS_ENCRYPTION_KEY`. Khóa này bắt buộc phải được giữ nguyên vĩnh viễn; thay đổi hoặc làm mất khóa sẽ khiến dữ liệu credential đã mã hóa không thể giải mã.
+
 Kiểm tra API sống chưa: mở `http://localhost:4000/api/health`.
+
+### Deploy backend lên Render
+
+Tạo một **Web Service** và cấu hình:
+
+- **Root Directory:** `backend`
+- **Build Command:** `npm install` (tự chạy seed để tạo dữ liệu mẫu khi dữ liệu đang trống)
+- **Start Command:** `npm start`
+
+Thiết lập biến môi trường `JWT_SECRET` bằng một chuỗi ngẫu nhiên dài và `GAME_CREDENTIALS_ENCRYPTION_KEY` là khóa Base64 32 byte; đặt `CORS_ORIGIN` là domain frontend (hoặc `*` khi đang thử nghiệm). Không cần đặt `PORT`, vì Render tự cấp biến này. Không đổi hoặc làm mất `GAME_CREDENTIALS_ENCRYPTION_KEY` sau khi đã có acc/đơn hàng.
+
+Nếu dùng SePay, URL webhook phải là `https://shopaccliqi.onrender.com/api/wallet/webhook` và phương thức là `POST`. Thêm `SEPAY_WEBHOOK_SECRET` trên Render với đúng giá trị đã cấu hình tại SePay.
+
+Để tài khoản đăng ký, số dư và đơn hàng không mất sau khi Render deploy/restart, đặt `DATABASE_URL` là **Session pooler connection string** của Supabase PostgreSQL. Ứng dụng tự tạo bảng dữ liệu và nhập dữ liệu mẫu một lần khi database còn trống. Không đưa `DATABASE_URL` vào frontend hoặc GitHub.
+
+Nếu dùng Render gói trả phí, có thể thay thế bằng Persistent Disk với mount path `/var/data` và `DATA_DIR=/var/data`; gói Free nên dùng PostgreSQL.
 
 ### Danh sách API chính
 
@@ -33,6 +59,7 @@ Kiểm tra API sống chưa: mở `http://localhost:4000/api/health`.
 | DELETE | `/api/accounts/:id`            | Admin       | Xóa acc                                          |
 | POST   | `/api/accounts/:id/purchase`   | Đăng nhập   | **Mua acc** — trừ tiền ví, đánh dấu đã bán       |
 | GET    | `/api/wallet/me`               | Đăng nhập   | Xem số dư ví hiện tại                            |
+| GET    | `/api/wallet/transactions`     | Đăng nhập   | Xem lịch sử nạp tiền của bản thân                |
 | POST   | `/api/wallet/topup`            | Đăng nhập   | **Nạp tiền vào ví** (demo, chưa qua cổng thanh toán thật) |
 | GET    | `/api/purchases/me`            | Đăng nhập   | Lịch sử acc đã mua của bản thân                  |
 | GET    | `/api/users`                   | Admin       | Danh sách người dùng                             |
