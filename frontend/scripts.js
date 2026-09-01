@@ -43,6 +43,7 @@ const modalImg = document.getElementById("modal-img");
 const modalClose = document.getElementById("modal-close");
 const modalInfoTitle = document.getElementById("modal-info-title");
 const modalInfoText = document.getElementById("modal-info-text");
+const modalInfoNote = document.getElementById("modal-info-note");
 const modalInfoSkins = document.getElementById("modal-info-skins");
 const modalBuyBtn = document.getElementById("modal-buy-btn");
 const modalSoldLabel = document.getElementById("modal-sold-label");
@@ -909,6 +910,10 @@ window.openImageModal = function (id) {
 
     if (modalInfoTitle) modalInfoTitle.textContent = formatPrice(item.price);
     if (modalInfoText) modalInfoText.textContent = item.info || "";
+    if (modalInfoNote) {
+        modalInfoNote.textContent = item.adminNote ? `📌 ${item.adminNote}` : "";
+        modalInfoNote.classList.toggle("hidden", !item.adminNote);
+    }
     if (modalInfoSkins) {
         modalInfoSkins.innerHTML = (item.skins || [])
             .map((skin) => `<span class="skin-tag">${escapeHTML(skin)}</span>`)
