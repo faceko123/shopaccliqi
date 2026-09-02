@@ -93,7 +93,13 @@ router.post("/recharges", requireAuth, async (req, res) => {
   });
   if (recharge.status === "USER_NOT_FOUND") return res.status(404).json({ error: "Không tìm thấy người dùng." });
   if (recharge.status === "CODE_COLLISION") return res.status(503).json({ error: "Không thể tạo mã nạp, vui lòng thử lại." });
-  return res.status(201).json({ code, amount, expiresAt: recharge.recharge.expiresAt });
+  const isExisting = recharge.status === "ACTIVE_RECHARGE";
+  return res.status(isExisting ? 200 : 201).json({
+    code: recharge.recharge.code,
+    amount: recharge.recharge.amount,
+    expiresAt: recharge.recharge.expiresAt,
+    reused: isExisting,
+  });
 });
 
 // GET /api/wallet/me - Lấy số dư hiện tại
