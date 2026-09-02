@@ -1,7 +1,7 @@
 # Shop Acc Liqi — Backend API + Frontend
 
 Dự án gồm 2 phần độc lập:
-- `backend/` — API Node.js/Express, lưu dữ liệu bằng 3 file JSON riêng biệt:
+- `backend/` — API Node.js/Express, lưu dữ liệu bằng các file JSON khi phát triển hoặc PostgreSQL khi triển khai:
   - `backend/data/accounts.json` — danh sách acc Liên Quân
   - `backend/data/users.json` — người dùng hệ thống (kèm số dư ví)
   - `backend/data/purchases.json` — lịch sử mua acc
@@ -13,7 +13,6 @@ Dự án gồm 2 phần độc lập:
 cd backend
 npm install
 cp .env.example .env      # rồi mở .env đổi JWT_SECRET thành chuỗi ngẫu nhiên của riêng bạn
-node seed.js               # tạo dữ liệu mẫu: 18 acc + 2 tài khoản (admin/admin123, user/user123, số dư 0đ)
 npm start                  # chạy server tại http://localhost:4000
 ```
 
@@ -37,9 +36,11 @@ Tạo một **Web Service** và cấu hình:
 - **Build Command:** `npm install` (tự chạy seed để tạo dữ liệu mẫu khi dữ liệu đang trống)
 - **Start Command:** `npm start`
 
-Thiết lập biến môi trường `JWT_SECRET` bằng một chuỗi ngẫu nhiên dài và `GAME_CREDENTIALS_ENCRYPTION_KEY` là khóa Base64 32 byte; đặt `CORS_ORIGIN` là domain frontend (hoặc `*` khi đang thử nghiệm). Không cần đặt `PORT`, vì Render tự cấp biến này. Không đổi hoặc làm mất `GAME_CREDENTIALS_ENCRYPTION_KEY` sau khi đã có acc/đơn hàng.
+Thiết lập biến môi trường `JWT_SECRET` bằng chuỗi ngẫu nhiên dài ít nhất 32 ký tự (API sẽ từ chối khởi động nếu thiếu/yếu), `GAME_CREDENTIALS_ENCRYPTION_KEY` là khóa Base64 32 byte và `SEPAY_WEBHOOK_SECRET` là chuỗi ngẫu nhiên riêng của SePay. Đặt `CORS_ORIGIN` là domain frontend (không dùng `*` ở môi trường thật). Không cần đặt `PORT`, vì Render tự cấp biến này. Không đổi hoặc làm mất `GAME_CREDENTIALS_ENCRYPTION_KEY` sau khi đã có acc/đơn hàng.
 
-Nếu dùng SePay, URL webhook phải là `https://shopaccliqi.onrender.com/api/wallet/webhook` và phương thức là `POST`. Thêm `SEPAY_WEBHOOK_SECRET` trên Render với đúng giá trị đã cấu hình tại SePay.
+Không có tài khoản thử nghiệm mặc định. Hãy tạo user/admin bằng quy trình quản trị của bạn trước khi đưa shop vào sử dụng.
+
+Nếu dùng SePay, URL webhook phải là `https://shopaccliqi.onrender.com/api/wallet/webhook` và phương thức là `POST`. Frontend tạo một mã nạp một lần dạng `NAP...` (hết hạn sau 30 phút); khách phải chuyển **đúng số tiền và đúng mã này**. Webhook chỉ chấp nhận mã nạp đang chờ, số tiền khớp tuyệt đối và `referenceCode` chưa từng xử lý — không suy diễn người nhận từ username trong nội dung chuyển khoản.
 
 Để tài khoản đăng ký, số dư và đơn hàng không mất sau khi Render deploy/restart, đặt `DATABASE_URL` là **Session pooler connection string** của Supabase PostgreSQL. Ứng dụng tự tạo bảng dữ liệu và nhập dữ liệu mẫu một lần khi database còn trống. Không đưa `DATABASE_URL` vào frontend hoặc GitHub.
 
@@ -59,6 +60,7 @@ Nếu dùng Render gói trả phí, có thể thay thế bằng Persistent Disk 
 | DELETE | `/api/accounts/:id`            | Admin       | Xóa acc                                          |
 | POST   | `/api/accounts/:id/purchase`   | Đăng nhập   | **Mua acc** — trừ tiền ví, đánh dấu đã bán       |
 | GET    | `/api/wallet/me`               | Đăng nhập   | Xem số dư ví hiện tại                            |
+| POST   | `/api/wallet/recharges`        | Đăng nhập   | Tạo mã nạp một lần cho số tiền chỉ định          |
 | GET    | `/api/wallet/transactions`     | Đăng nhập   | Xem lịch sử nạp tiền của bản thân                |
 | POST   | `/api/wallet/topup`            | Đăng nhập   | **Nạp tiền vào ví** (demo, chưa qua cổng thanh toán thật) |
 | GET    | `/api/purchases/me`            | Đăng nhập   | Lịch sử acc đã mua của bản thân                  |
@@ -107,7 +109,7 @@ Mở `frontend/config.js` và đảm bảo `API_BASE_URL` trỏ đúng địa ch
 - **Thêm chức năng đăng ký** tài khoản mới (role mặc định `user`).
 - **Trang quản lý người dùng** cho admin, gộp chung vào 1 menu "⚙️ Tính năng" cùng "Thêm acc mới".
 - **Tìm kiếm & phân trang xử lý ở server**, hỗ trợ tìm theo giá dạng rút gọn (`1xx`, `2x`...).
-- **`data.js` không còn cần thiết** — dữ liệu mẫu giờ nằm trong `backend/seed.js`.
+- **`data.js` và `seed.js` không còn cần thiết** — dữ liệu được quản lý trực tiếp qua API hoặc PostgreSQL.
 
 ## 5. Nâng cấp sau này
 
