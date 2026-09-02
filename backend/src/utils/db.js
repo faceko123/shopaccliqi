@@ -143,6 +143,16 @@ async function purchaseAccount({ accountId, userId, purchaseId, now }) {
 async function createRecharge({ userId, code, amount, now, expiresAt }) {
   return withLockedData(["users", "recharges"], async (data) => {
     if (!data.users.some((user) => user.id === userId)) return { status: "USER_NOT_FOUND" };
+    const nowMs = new Date(now).getTime();
+    // Mã chưa thanh toán đã hết hạn không còn giá trị đối soát và được dọn ở
+    // lần tạo mã kế tiếp. Chỉ giữ pending còn hiệu lực hoặc mã đã hoàn tất.
+    data.recharges = data.recharges.filter((recharge) =>
+      recharge.status === "completed" || new Date(recharge.expiresAt).getTime() > nowMs
+    );
+    const activeRecharge = data.recharges.find((recharge) =>
+      recharge.userId === userId && recharge.status === "pending"
+    );
+    if (activeRecharge) return { status: "ACTIVE_RECHARGE", recharge: activeRecharge };
     if (data.recharges.some((recharge) => recharge.code === code)) return { status: "CODE_COLLISION" };
     const recharge = { code, userId, amount, status: "pending", createdAt: now, expiresAt };
     data.recharges.push(recharge);
