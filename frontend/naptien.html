@@ -320,8 +320,14 @@
                         body: JSON.stringify({ amount })
                     });
                     const memo = recharge.code;
+                    // Server chỉ cho một mã pending. Đồng bộ lại input để số
+                    // tiền trên QR luôn khớp chính xác với mã đang hiệu lực.
+                    if (Number(recharge.amount) !== amount) {
+                        topupInput.value = recharge.amount;
+                        showToast("Bạn đang có mã nạp chờ xử lý; QR đã dùng đúng số tiền của mã đó.", "info");
+                    }
                     transferContentEl.textContent = memo;
-                    const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-qronly.png?amount=${amount}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
+                    const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-qronly.png?amount=${recharge.amount}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
                     vietqrImg.src = qrUrl;
                 } catch (err) {
                     transferContentEl.textContent = "Không thể tạo mã nạp";
